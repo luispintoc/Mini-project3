@@ -1,34 +1,18 @@
-import torch, torchvision
-from visdom import Visdom
+import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
+import torchvision.transforms as transforms
 from torch.autograd import Variable
-import matplotlib.pyplot as plt
-import cv2
-import numpy as np
-from mlxtend.data import loadlocal_mnist
-from matplotlib.patches import Rectangle
-import os
+import pandas as pd
+from sklearn.model_selection import train_test_split
 
-x, y = loadlocal_mnist(images_path = 'mnist_data/raw/train-images-idx3-ubyte',	#x.shape=(60000,784) -> 60000 images and 784 pixels per image (28x28)
-						labels_path = 'mnist_data/raw/train-labels-idx1-ubyte')
-w,h = 28,28
+# CUDA for PyTorch
+use_cuda = torch.cuda.is_available()
+device = torch.device("cuda:0" if use_cuda else "cpu")
 
-print(x.shape[0])
-x = [x[i].reshape(w,h) for i in range(x.shape[0])]
+#load data
+train_images = pd.read_pickle('train_images.pkl')
+train_labels = pd.read_csv('train_labels.csv')
+test_images = pd.read_pickle('test_images.pkl')
 
-# plt.imshow(x[1], cmap = 'gray')
-# plt.show()
-# cv2.imshow('s',x[1])
-# k = cv2.waitKey(0)
-
-def bbox2(img):
-    rows = np.any(img, axis=1)
-    cols = np.any(img, axis=0)
-    rmin, rmax = np.where(rows)[0][[0, -1]]
-    cmin, cmax = np.where(cols)[0][[0, -1]]
-
-    return rmin, rmax, cmin, cmax
-
-print(bbox2(x[1]))
+train_labels = train_labels.Category.tolist()
+print(type(train_labels))
