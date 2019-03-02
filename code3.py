@@ -17,36 +17,68 @@ train_labels = pd.read_csv('train_labels.csv')
 test_images = pd.read_pickle('test_images.pkl')
 train_labels = np.asarray(train_labels.Category)
 
+def normalization(images):
+    pop_mean = []
+    pop_std0 = []
+    images2 = []
+
+    for image in images:
+        batch_mean = (image.mean())
+        batch_std0 = (image.std())
+        pop_mean.append(batch_mean)
+        pop_std0.append(batch_std0)
+
+    pop_mean = (sum(pop_mean)/len(pop_mean))
+    pop_std0 = (sum(pop_std0)/len(pop_std0))
+
+    for image in images:
+        image = (image - pop_mean)/pop_std0
+        images2.append(image)
+
+    return images2
+
+train_images = np.asarray(normalization(train_images))
+test_images = np.asarray(normalization(test_images))
 
 features_numpy = train_images
 targets_numpy = train_labels
 features_train, features_test, targets_train, targets_test = train_test_split(features_numpy,
                                                                              targets_numpy,
                                                                              test_size = 0.2,
-                                                                             random_state = 42) 
+                                                                             random_state = 44) 
 
-train_batch_size =128
-test_batch_size =128
+train_batch_size = 1000
+test_batch_size = 250
 
+# print(features_train[0])
 X_train = torch.from_numpy(features_train)
+# print(X_train[0])
 X_test = torch.from_numpy(features_test)
 
 Y_train = torch.from_numpy(targets_train).type(torch.LongTensor) 
 Y_test = torch.from_numpy(targets_test).type(torch.LongTensor)
 
+
 train = torch.utils.data.TensorDataset(X_train,Y_train)
 test = torch.utils.data.TensorDataset(X_test,Y_test)
-
+# print(type(train))
 
 train_loader = torch.utils.data.DataLoader(train, batch_size = train_batch_size, shuffle = False)
 test_loader = torch.utils.data.DataLoader(test, batch_size = test_batch_size, shuffle = False)
+
+# for i,data in enumerate(train_loader,0):
+#     print(type(torch.div(data[0].mean(),255).numpy()))
+#     print(type(torch.div(data[0].std(),255).numpy()))
+    # print(type(data[0].mean()))
+    # print(type(data[0].std()))
+
 
 class CNN(nn.Module):
     def __init__(self):
         super(CNN,self).__init__()
         self.cnn_1 = nn.Conv2d(in_channels = 1, out_channels = 16, kernel_size = 5, stride=1, padding=0)
         self.cnn_2 = nn.Conv2d(in_channels = 16, out_channels = 32, kernel_size = 5, stride=1, padding=0)
-        self.relu = nn.ReLU()
+        self.relu = nn.LeakyReLU()
         self.maxpool = nn.MaxPool2d(2,2)
         self.dropout = nn.Dropout(p=0.2)
         self.dropout2d = nn.Dropout2d(p=0.2)
@@ -78,11 +110,10 @@ class CNN(nn.Module):
 
 
 model = CNN()
-# model = model.double()
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(),lr=0.003)
+optimizer = torch.optim.Adam(model.parameters(),lr=0.005)
 
-epochs = 15
+epochs = 32
 train_losses, test_losses = [] ,[]
 for epoch in range(epochs):
     running_loss = 0
@@ -92,7 +123,6 @@ for epoch in range(epochs):
         
         optimizer.zero_grad()
         
-        # print(type(train))
         output = model(train)
         loss = criterion(output,labels)
         loss.backward()
