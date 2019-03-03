@@ -18,6 +18,30 @@ test_images = pd.read_pickle('test_images.pkl')
 train_labels = np.asarray(train_labels.Category)
 
 
+def normalization(images):
+    pop_mean = []
+    pop_std0 = []
+    images2 = []
+
+    for image in images:
+        batch_mean = (image.mean())
+        batch_std0 = (image.std())
+        pop_mean.append(batch_mean)
+        pop_std0.append(batch_std0)
+
+    pop_mean = (sum(pop_mean)/len(pop_mean))
+    pop_std0 = (sum(pop_std0)/len(pop_std0))
+
+    for image in images:
+        image = (image - pop_mean)/pop_std0
+        images2.append(image)
+
+    return images2
+
+train_images = np.asarray(normalization(train_images))
+test_images = np.asarray(normalization(test_images))
+
+
 features_numpy = train_images
 targets_numpy = train_labels
 features_train, features_test, targets_train, targets_test = train_test_split(features_numpy,
@@ -26,7 +50,6 @@ features_train, features_test, targets_train, targets_test = train_test_split(fe
                                                                              random_state = 42) 
 #	********* Test means validation	********
 
-
 featuresTrain = torch.from_numpy(features_train)
 targetsTrain = torch.from_numpy(targets_train).type(torch.LongTensor) # data type is long
 
@@ -34,18 +57,19 @@ targetsTrain = torch.from_numpy(targets_train).type(torch.LongTensor) # data typ
 featuresTest = torch.from_numpy(features_test)
 targetsTest = torch.from_numpy(targets_test).type(torch.LongTensor) # data type is long
 
-# batch_size, epoch and iteration
-batch_size = 128
-n_iters = 10000
-num_epochs = n_iters / (len(features_train) / batch_size)
-num_epochs = int(num_epochs)
-
 # Pytorch train and test sets
 train = torch.utils.data.TensorDataset(featuresTrain,targetsTrain)
 test = torch.utils.data.TensorDataset(featuresTest,targetsTest)
 
+# batch_size, epoch and iteration
+batch_size = 500
+n_iters = 32000
+# num_epochs = n_iters / (len(features_train) / batch_size)
+# num_epochs = int(num_epochs)
+num_epochs = 500
+
 # data loader
-train_loader = torch.utils.data.DataLoader(train, batch_size = batch_size, shuffle = False)
+train_loader = torch.utils.data.DataLoader(train, batch_size = batch_size, shuffle = True)
 test_loader = torch.utils.data.DataLoader(test, batch_size = batch_size, shuffle = False)
 
 # visualize one of the images in data set
@@ -62,14 +86,14 @@ class CNNModel(nn.Module):
         
         # Convolution 1
         self.cnn1 = nn.Conv2d(in_channels=1, out_channels=16, kernel_size=5, stride=1, padding=0)
-        self.relu1 = nn.ReLU()
+        self.relu1 = nn.LeakyReLU()
         
         # Max pool 1
         self.maxpool1 = nn.MaxPool2d(kernel_size=2)
      
         # Convolution 2
         self.cnn2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=5, stride=1, padding=0)
-        self.relu2 = nn.ReLU()
+        self.relu2 = nn.LeakyReLU()
         
         # Max pool 2
         self.maxpool2 = nn.MaxPool2d(kernel_size=2)
@@ -98,29 +122,26 @@ class CNNModel(nn.Module):
         
         return out
 
-# batch_size, epoch and iteration
-batch_size = 100
-n_iters = 2500
-num_epochs = n_iters / (len(features_train) / batch_size)
-num_epochs = int(num_epochs)
-
 # Pytorch train and test sets
 train = torch.utils.data.TensorDataset(featuresTrain,targetsTrain)
 test = torch.utils.data.TensorDataset(featuresTest,targetsTest)
 
 # data loader
-train_loader = torch.utils.data.DataLoader(train, batch_size = batch_size, shuffle = False)
+train_loader = torch.utils.data.DataLoader(train, batch_size = batch_size, shuffle = True)
 test_loader = torch.utils.data.DataLoader(test, batch_size = batch_size, shuffle = False)
     
 # Create ANN
 model = CNNModel()
 
+if use_cuda:
+	model = model.cuda()
+
 # Cross Entropy Loss 
 error = nn.CrossEntropyLoss()
 
 # SGD Optimizer
-learning_rate = 0.1
-optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+learning_rate = 0.0009
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
 
 # CNN model training
@@ -130,17 +151,19 @@ iteration_list = []
 accuracy_list = []
 for epoch in range(num_epochs):
     for i, (images, labels) in enumerate(train_loader):
-        
+        if use_cuda:
+        	images, labels = images.cuda(), labels.cuda()
         train = Variable(images.view(-1,1,64,64))
         labels = Variable(labels)
         
         # Clear gradients
         optimizer.zero_grad()
         
+        # print(type(train[0][0]))
         # Forward propagation
         outputs = model(train)
         
-        # Calculate softmax and ross entropy loss
+        # Calculate softmax and cross entropy loss
         loss = error(outputs, labels)
         
         # Calculating gradients
@@ -157,6 +180,8 @@ for epoch in range(num_epochs):
             # Iterate through test dataset
             for images, labels in test_loader:
                 
+                if use_cuda:
+                	images, labels = images.cuda(), labels.cuda()
                 test = Variable(images.view(-1,1,64,64))
                 
                 # Forward propagation
@@ -186,7 +211,6 @@ plt.plot(iteration_list,loss_list)
 plt.xlabel("Number of iteration")
 plt.ylabel("Loss")
 plt.title("CNN: Loss vs Number of iteration")
-plt.show()
 
 # visualization accuracy 
 plt.plot(iteration_list,accuracy_list,color = "red")
