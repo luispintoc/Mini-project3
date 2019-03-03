@@ -48,11 +48,9 @@ features_train, features_test, targets_train, targets_test = train_test_split(fe
                                                                              random_state = 44) 
 
 train_batch_size = 1000
-test_batch_size = 250
+test_batch_size = 1000
 
-# print(features_train[0])
 X_train = torch.from_numpy(features_train)
-# print(X_train[0])
 X_test = torch.from_numpy(features_test)
 
 Y_train = torch.from_numpy(targets_train).type(torch.LongTensor) 
@@ -61,16 +59,9 @@ Y_test = torch.from_numpy(targets_test).type(torch.LongTensor)
 
 train = torch.utils.data.TensorDataset(X_train,Y_train)
 test = torch.utils.data.TensorDataset(X_test,Y_test)
-# print(type(train))
 
-train_loader = torch.utils.data.DataLoader(train, batch_size = train_batch_size, shuffle = False)
+train_loader = torch.utils.data.DataLoader(train, batch_size = train_batch_size, shuffle = True)
 test_loader = torch.utils.data.DataLoader(test, batch_size = test_batch_size, shuffle = False)
-
-# for i,data in enumerate(train_loader,0):
-#     print(type(torch.div(data[0].mean(),255).numpy()))
-#     print(type(torch.div(data[0].std(),255).numpy()))
-    # print(type(data[0].mean()))
-    # print(type(data[0].std()))
 
 
 class CNN(nn.Module):
@@ -83,8 +74,8 @@ class CNN(nn.Module):
         self.dropout = nn.Dropout(p=0.2)
         self.dropout2d = nn.Dropout2d(p=0.2)
         
-        self.fc1 = nn.Linear(5408, 128) 
-        self.fc2 = nn.Linear(128, 64) 
+        self.fc1 = nn.Linear(5408, 64) 
+        # self.fc2 = nn.Linear(128, 64) 
         self.out = nn.Linear(64, 10) 
 
     def forward(self,x):
@@ -102,22 +93,26 @@ class CNN(nn.Module):
         out = out.view(out.size(0), -1)
         out = self.fc1(out)
         out = self.dropout(out)
-        out = self.fc2(out)
-        out = self.dropout(out)
+        # out = self.fc2(out)
+        # out = self.dropout(out)
         out = self.out(out)
         
         return out
 
 
 model = CNN()
+if use_cuda:
+    model = model.cuda()
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(),lr=0.005)
+optimizer = torch.optim.Adam(model.parameters(),lr=0.0005)
 
-epochs = 32
+epochs = 1000
 train_losses, test_losses = [] ,[]
 for epoch in range(epochs):
     running_loss = 0
     for images,labels in train_loader:
+        if use_cuda:
+            images, labels = images.cuda(), labels.cuda()
         train = Variable(images.view(-1,1,64,64))
         labels = Variable(labels)
         
@@ -137,7 +132,8 @@ for epoch in range(epochs):
         with torch.no_grad(): #Turning off gradients to speed up
             model.eval()
             for images,labels in test_loader:
-                
+                if use_cuda:
+                    images, labels = images.cuda(), labels.cuda()
                 test = Variable(images.view(-1,1,64,64))
                 labels = Variable(labels)
                 
@@ -157,7 +153,9 @@ for epoch in range(epochs):
       		"Test Loss: {:.3f}.. ".format(test_loss/len(test_loader)),
       		"Test Accuracy: {:.3f}".format(accuracy/len(test_loader)))
 
-
+plt.figure(1)
 plt.plot(train_losses, label='Training loss')
+plt.figure(2)
 plt.plot(test_losses, label='Validation loss')
 plt.legend(frameon=False)
+plt.show()
