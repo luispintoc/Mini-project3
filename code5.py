@@ -70,7 +70,7 @@ class CNN(nn.Module):
         self.cnn_1 = nn.Conv2d(in_channels = 1, out_channels = 16, kernel_size = 5, stride=1, padding=0)
         self.cnn_2 = nn.Conv2d(in_channels = 16, out_channels = 32, kernel_size = 5, stride=1, padding=0)
         self.cnn_3 = nn.Conv2d(in_channels = 32, out_channels = 64, kernel_size = 5, stride=1, padding=0)
-        self.relu = nn.LeakyReLU()
+        self.relu = nn.ReLU()
         self.maxpool = nn.MaxPool2d(2,2)
         self.dropout = nn.Dropout(p=0.2)
         self.dropout2d = nn.Dropout2d(p=0.2)
@@ -125,7 +125,7 @@ model = CNN()
 if use_cuda:
     model = model.cuda()
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(),lr=0.0001)
+optimizer = torch.optim.Adam(model.parameters(),lr=0.0007)
 
 epochs = 1000
 train_losses, test_losses = [] ,[]
