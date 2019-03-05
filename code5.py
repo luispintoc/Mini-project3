@@ -47,8 +47,8 @@ features_train, features_test, targets_train, targets_test = train_test_split(fe
                                                                              test_size = 0.2,
                                                                              random_state = 44) 
 
-train_batch_size = 1000
-test_batch_size = 1000
+train_batch_size = 1600
+test_batch_size = 1600
 
 X_train = torch.from_numpy(features_train)
 X_test = torch.from_numpy(features_test)
@@ -173,6 +173,8 @@ for epoch in range(epochs):
       		"Training Loss: {:.3f}.. ".format(running_loss/len(train_loader)),
       		"Test Loss: {:.3f}.. ".format(test_loss/len(test_loader)),
       		"Test Accuracy: {:.3f}".format(accuracy/len(test_loader)))
+        
+        
 
 plt.figure(1)
 plt.plot(train_losses, label='Training loss')

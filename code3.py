@@ -6,6 +6,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 import numpy as np
 import matplotlib.pyplot as plt
+import time
 
 # CUDA for PyTorch
 use_cuda = torch.cuda.is_available()
@@ -46,9 +47,9 @@ features_train, features_test, targets_train, targets_test = train_test_split(fe
                                                                              targets_numpy,
                                                                              test_size = 0.2,
                                                                              random_state = 44) 
-
-train_batch_size = 1000
-test_batch_size = 1000
+learning_rate = 0.0005
+train_batch_size = 1600
+test_batch_size = 1600
 
 X_train = torch.from_numpy(features_train)
 X_test = torch.from_numpy(features_test)
@@ -104,11 +105,18 @@ model = CNN()
 if use_cuda:
     model = model.cuda()
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(),lr=0.0005)
+optimizer = torch.optim.Adam(model.parameters(),lr=learning_rate)
 
-epochs = 1000
+epochs = 250
 train_losses, test_losses = [] ,[]
+t_start = time.time()
+
+ep_count = 0
+acc_tolerance = 0.005
+acc_norm = 0
+
 for epoch in range(epochs):
+    start = time.time()
     running_loss = 0
     for images,labels in train_loader:
         if use_cuda:
@@ -124,10 +132,11 @@ for epoch in range(epochs):
         optimizer.step()
         
         running_loss += loss.item()
+    
     else:
         test_loss = 0
+        acc_old = acc_norm
         accuracy = 0
-
 
         with torch.no_grad(): #Turning off gradients to speed up
             model.eval()
@@ -144,14 +153,35 @@ for epoch in range(epochs):
                 top_p, top_class = ps.topk(1, dim = 1)
                 equals = top_class == labels.view(*top_class.shape)
                 accuracy += torch.mean(equals.type(torch.FloatTensor))
+                
         model.train()        
         train_losses.append(running_loss/len(train_loader))
         test_losses.append(test_loss/len(test_loader))
-
+        end = time.time()
+        epoch_runtime = end - start
+        
+        acc_norm = accuracy/len(test_loader)
+        
+        d_acc_norm = abs(acc_norm - acc_old)
+        
         print("Epoch: {}/{}.. ".format(epoch+1, epochs),
       		"Training Loss: {:.3f}.. ".format(running_loss/len(train_loader)),
       		"Test Loss: {:.3f}.. ".format(test_loss/len(test_loader)),
-      		"Test Accuracy: {:.3f}".format(accuracy/len(test_loader)))
+      		"Test Accuracy: {:.3f}".format(accuracy/len(test_loader)),
+              "Epoch Runtime: {:.3f}".format(epoch_runtime))
+        
+        if d_acc_norm < acc_tolerance:
+            ep_count += 1
+        else:
+            ep_count = 0
+            
+        if ep_count > 10:
+            print("Ending Training at Epoch {}".format(epoch))
+            break
+
+t_end = time.time()
+
+print("Total Runtime: {:.3f}".format(t_end - t_start))
 
 plt.figure(1)
 plt.plot(train_losses, label='Training loss')
