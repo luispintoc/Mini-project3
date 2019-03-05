@@ -6,6 +6,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 import numpy as np
 import matplotlib.pyplot as plt
+import time
 
 # CUDA for PyTorch
 use_cuda = torch.cuda.is_available()
@@ -16,6 +17,24 @@ train_images = pd.read_pickle('train_images.pkl')
 train_labels = pd.read_csv('train_labels.csv')
 test_images = pd.read_pickle('test_images.pkl')
 train_labels = np.asarray(train_labels.Category)
+
+# For debugging, comment out for actual training
+#train_images = train_images[0:4000]
+#train_labels = train_labels[0:4000]
+#test_images = test_images[0:1000]
+
+# Define Hyperparameters
+
+learning_rate = 0.0005
+train_batch_size = 500
+test_batch_size = 100
+max_epochs = 50
+
+# If Delta (accuracy) < acc_tolerance a total of acc_number consecutive times, terminate
+acc_tolerance = 0.1 #
+acc_number = 10
+
+# Functions
 
 def normalization(images):
     pop_mean = []
@@ -46,9 +65,6 @@ features_train, features_test, targets_train, targets_test = train_test_split(fe
                                                                              targets_numpy,
                                                                              test_size = 0.2,
                                                                              random_state = 44) 
-
-train_batch_size = 1000
-test_batch_size = 1000
 
 X_train = torch.from_numpy(features_train)
 X_test = torch.from_numpy(features_test)
@@ -135,11 +151,15 @@ model = CNN()
 if use_cuda:
     model = model.cuda()
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(),lr=0.0007)
+optimizer = torch.optim.Adam(model.parameters(),lr=learning_rate)
 
-epochs = 1000
 train_losses, test_losses = [] ,[]
-for epoch in range(epochs):
+
+acc_norm = 0
+acc_count = 0
+
+for epoch in range(max_epochs):
+    start = time.time()
     running_loss = 0
     for images,labels in train_loader:
         if use_cuda:
@@ -158,8 +178,8 @@ for epoch in range(epochs):
     else:
         test_loss = 0
         accuracy = 0
-
-
+        acc_old = acc_norm
+        
         with torch.no_grad(): #Turning off gradients to speed up
             model.eval()
             for images,labels in test_loader:
@@ -178,11 +198,24 @@ for epoch in range(epochs):
         model.train()        
         train_losses.append(running_loss/len(train_loader))
         test_losses.append(test_loss/len(test_loader))
+        
+        acc_norm = accuracy/len(test_loader)
+        dacc = abs(acc_norm - acc_old)
+        
+        end = time.time()
 
-        print("Epoch: {}/{}.. ".format(epoch+1, epochs),
+        print("Epoch: {}/{}.. ".format(epoch+1, max_epochs),
       		"Training Loss: {:.3f}.. ".format(running_loss/len(train_loader)),
       		"Test Loss: {:.3f}.. ".format(test_loss/len(test_loader)),
-      		"Test Accuracy: {:.3f}".format(accuracy/len(test_loader)))
+      		"Test Accuracy: {:.3f}.. ".format(accuracy/len(test_loader)),
+              "Epoch Runtime: {:.3f}".format(end - start))
+        
+        if dacc < acc_tolerance:
+            acc_count += 1
+            
+        if acc_count > acc_number: 
+            print("Training ended at Epoch {}/{}".format(epoch+1,max_epochs))
+            break
 
 plt.figure(1)
 plt.plot(train_losses, label='Training loss')
