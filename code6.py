@@ -25,13 +25,13 @@ train_labels = np.asarray(train_labels.Category)
 
 # Define Hyperparameters
 
-learning_rate = 0.0005
-train_batch_size = 500
-test_batch_size = 100
-max_epochs = 50
+learning_rate = 0.0007
+train_batch_size = 1000
+test_batch_size = 1000
+max_epochs = 1000
 
 # If Delta (accuracy) < acc_tolerance a total of acc_number consecutive times, terminate
-acc_tolerance = 0.1 #
+acc_tolerance = 0.01 #
 acc_number = 10
 
 # Functions
