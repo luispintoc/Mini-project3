@@ -47,8 +47,8 @@ features_train, features_test, targets_train, targets_test = train_test_split(fe
                                                                              test_size = 0.2,
                                                                              random_state = 44) 
 
-train_batch_size = 1600
-test_batch_size = 1600
+train_batch_size = 1000
+test_batch_size = 1000
 
 X_train = torch.from_numpy(features_train)
 X_test = torch.from_numpy(features_test)
@@ -67,22 +67,23 @@ test_loader = torch.utils.data.DataLoader(test, batch_size = test_batch_size, sh
 class CNN(nn.Module):
     def __init__(self):
         super(CNN,self).__init__()
-        self.cnn_1 = nn.Conv2d(in_channels = 1, out_channels = 16, kernel_size = 5, stride=1, padding=0)
-        self.cnn_2 = nn.Conv2d(in_channels = 16, out_channels = 32, kernel_size = 5, stride=1, padding=0)
-        self.cnn_3 = nn.Conv2d(in_channels = 32, out_channels = 64, kernel_size = 5, stride=1, padding=0)
+        self.cnn_1 = nn.Conv2d(in_channels = 1, out_channels = 16, kernel_size = 2, stride=1, padding=1)
+        self.cnn_2 = nn.Conv2d(in_channels = 16, out_channels = 32, kernel_size = 3, stride=1, padding=1)
+        self.cnn_3 = nn.Conv2d(in_channels = 32, out_channels = 64, kernel_size = 3, stride=1, padding=1)
+        self.cnn_4 = nn.Conv2d(in_channels = 64, out_channels = 100, kernel_size = 3, stride=1, padding=1)
         self.relu = nn.ReLU()
         self.maxpool = nn.MaxPool2d(2,2)
         self.dropout = nn.Dropout(p=0.2)
         self.dropout2d = nn.Dropout2d(p=0.2)
         
-        self.fc1 = nn.Linear(1024, 256) 
-        self.fc2 = nn.Linear(256, 64) 
-        self.out = nn.Linear(64, 10) 
+        self.fc1 = nn.Linear(100*4*4, 500) 
+        self.fc2 = nn.Linear(500, 100) 
+        self.out = nn.Linear(100, 10) 
 
     def forward(self,x):
         # print(x.size())
         out = self.cnn_1(x)
-        # print(out.size())
+        # print(out.size(), 'cn1')
         out = self.relu(out)
         # print(out.size())
         out = self.dropout2d(out)
@@ -91,7 +92,7 @@ class CNN(nn.Module):
         # print(out.size())
         
         out = self.cnn_2(out)
-        # print(out.size())
+        # print(out.size(), 'cn2')
         out = self.relu(out)
         # print(out.size())
         out = self.dropout2d(out)
@@ -100,6 +101,15 @@ class CNN(nn.Module):
         # print(out.size())
 
         out = self.cnn_3(out)
+        # print(out.size(), 'cn3')
+        out = self.relu(out)
+        # print(out.size())
+        out = self.dropout2d(out)
+        # print(out.size())
+        out = self.maxpool(out)
+        # print(out.size())
+
+        out = self.cnn_4(out)
         # print(out.size())
         out = self.relu(out)
         # print(out.size())
@@ -173,8 +183,6 @@ for epoch in range(epochs):
       		"Training Loss: {:.3f}.. ".format(running_loss/len(train_loader)),
       		"Test Loss: {:.3f}.. ".format(test_loss/len(test_loader)),
       		"Test Accuracy: {:.3f}".format(accuracy/len(test_loader)))
-        
-        
 
 plt.figure(1)
 plt.plot(train_losses, label='Training loss')
