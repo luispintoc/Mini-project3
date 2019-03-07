@@ -222,6 +222,8 @@ for epoch in range(max_epochs):
         tlpp = tlp
         tlp = test_loss
         
+		test_loss = 0
+		
         meantestloss_old = meantestloss
         
         with torch.no_grad(): #Turning off gradients to speed up
