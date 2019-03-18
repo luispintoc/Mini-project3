@@ -11,5 +11,5 @@ In order to run these scripts, the data files should be in the same folder. Also
 * Best test accuracy: 93.4%
 
 **script_to_submit.py**
-* *Task: Uses the best_model.py architecture to output a csv file to submit on the Kaggle competition
+* *Task: Uses the best_model.py architecture to output a csv file to submit on the Kaggle competition*
 * Uses the CSV package
